@@ -1,0 +1,5 @@
+[MASTER]
+extension-pkg-allow-list=pyodbc
+
+[MAIN]
+max-line-length=300
