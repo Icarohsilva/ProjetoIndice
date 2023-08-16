@@ -7,7 +7,6 @@ from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
 
-
 def indices_tjmg(banco, ano_base):
     """Recuperar Índices do TJMG"""  
     banco = banco
@@ -90,12 +89,12 @@ def indices_tjmg(banco, ano_base):
 
                     # Ignora o primeiro valor (mes/ano) e pega os demais
                     for descricao, valor in zip(descricoes, valores[0:]):
-                        valor = valor.text.strip().replace(',', '.')
+                        valor = valor.text.strip().replace('.', '').replace(',', '.')
                         dados_tabela.append((descricao, mes_ano, valor))
 
             # Agora a lista dados_tabela contém tuplas com o mês/ano, a descrição e o valor de cada índice
             for registro in dados_tabela:
-                mes_ano, descricao, valor = registro
+                descricao, mes_ano, valor = registro
                 print(f"Mês/Ano: {mes_ano}, Descrição: {descricao}, Valor: {valor}")
 
 
@@ -107,41 +106,75 @@ def indices_tjmg(banco, ano_base):
 
 
         for linha in dados_tabela:
-            mes = linha[0]
-            indice = linha[1]
-            if indice != "-" and mes != 'Ac.Ano':
-                if isinstance(indice, str):
-                    indice = indice.replace(",", ".")
+            indice = linha[0].strip() # Remover espaços extras no final do índice
+            mes_ano = linha[1]
+            valor = linha[2]
 
-                    # Converter o nome do mês para o número correspondente
-                    mes_numero = meses_dict.get(mes)
-                    if mes_numero is None:
-                        raise ValueError(f"Mês inválido: {mes}")
+            if valor != "-" and mes_ano != 'Ac.Ano':
 
+                mes, ano = mes_ano.split('/')
 
-                select_query = f"SELECT CodIndiceMonetario FROM tbIndiceMonetario WHERE DescIndiceMonetario = '{indice_name}'"
+                # Converter o nome do mês para o número correspondente
+                mes_numero = meses_dict.get(mes)
+                if mes_numero is None:
+                    raise ValueError(f"Mês inválido: {mes}")
+
+                # Verificar se o indice ja esta cadastrado
+                if indice == "50 OTN's - Valor de alçada":
+                    indice = "50 OTNs - Valor de alçada"
+
+                select_query = f"SELECT CodIndiceMonetario FROM tbIndiceMonetario WHERE DescIndiceMonetario = '{indice}'"
                 cursor.execute(select_query)
                 row = cursor.fetchone()
 
-                #Conectar ao banco de dados SQL Server
-                connection_string = f'DRIVER={DRIVER};SERVER={SERVER};DATABASE={DATABASE};UID={USERNAME};PWD={PASSWORD}'
-                conn = pyodbc.connect(connection_string)
-                cursor = conn.cursor()
+                if row:
+                    CodIndiceMonetario = row[0]  # Fetch the first column of the first row (CodIndiceMonetario)
+                else:
+                    # If the index doesn't exist, insert it into the tbIndiceMonetario table
+                    if indice in ["50 OTNs - Valor de alçada", "Salário Mínimo", "UFEMG", "Valor da Cessão do Metro Quadrado"]:
+                        tipo = 2
+                    else:
+                        tipo = 1
 
-                #Incluir registros atualizados
-                query = f"INSERT INTO tbFatorIndiceMonetarioAtualizado (Mes, Ano, Valor, DtCadastro, UserCadastro, CodIndiceMonetario, status) VALUES ({mes_numero}, {ano}, {indice}, GETDATE(), 6026, 9, 1)"
-                cursor.execute(query)
-                print(query)
-                #Confirmar as alterações e fechar a conexão
-                conn.commit()
-                conn.close()
+                    insert_query = f"INSERT INTO tbIndiceMonetario (DescIndiceMonetario, Status, DtCadastro, UserCadastro, Tipo) VALUES ('{indice}', 1, GETDATE(), 6026, {tipo})"
+                    cursor.execute(insert_query)
+                    conn.commit()
 
+                    # Perform the query again to get the inserted CodIndiceMonetario
+                    cursor.execute(select_query)
+                    CodIndiceMonetario = cursor.fetchone()[0]
+
+                # Verificar se o registro já existe com os mesmos valores
+                select_query = f"SELECT COUNT(*) FROM tbFatorIndiceMonetarioAtualizado WHERE Mes = {mes_numero} AND Ano = {ano} AND Valor = {valor} AND CodIndiceMonetario = {CodIndiceMonetario}"
+                cursor.execute(select_query)
+                count = cursor.fetchone()[0]
+
+                if count == 0:
+                    # Verificar se existe um registro com o mesmo ano, mês e CodIndiceMonetario, mas com valor diferente
+                    select_query = f"SELECT Valor FROM tbFatorIndiceMonetarioAtualizado WHERE Mes = {mes_numero} AND Ano = {ano} AND CodIndiceMonetario = {CodIndiceMonetario}"
+                    cursor.execute(select_query)
+                    existing_value = cursor.fetchone()
+
+                    if existing_value:
+                        existing_value = existing_value[0]
+                        if existing_value != valor:
+                            # Atualizar o valor no registro existente
+                            update_query = f"UPDATE tbFatorIndiceMonetarioAtualizado SET Valor = {valor} WHERE Mes = {mes_numero} AND Ano = {ano} AND CodIndiceMonetario = {CodIndiceMonetario}"
+                            cursor.execute(update_query)
+                            print(update_query)
+                            conn.commit()
+                    else:
+                        # Inserir um novo registro
+                        if valor is not None:
+                            insert_query = f"INSERT INTO tbFatorIndiceMonetarioAtualizado (Mes, Ano, Valor, DtCadastro, UserCadastro, CodIndiceMonetario, status) VALUES ({mes_numero}, {ano}, {valor}, GETDATE(), 6026, {CodIndiceMonetario}, 1)"
+                            cursor.execute(insert_query)
+                            print(insert_query)
+                            conn.commit()
+                else:
+                    print("O registro já existe")
+
+    
+    print('Índices atualizados com sucesso')
+            
 if __name__ == "__main__":
     pass
-
-
-
-banco = "COPASA_DEV"
-ano_base = 2023
-
-indices_tjmg(banco, ano_base)

@@ -22,28 +22,6 @@ def indices_avulso(banco, indice):
     conn = pyodbc.connect(connection_string)
     cursor = conn.cursor()
 
-    if indice != "Todos":
-        # Inclua as aspas simples na variável 'indice' antes de utilizá-la na query
-        indice = f"'{indice}'"        
-        select_query = f"SELECT CodFatorIndiceMonetario FROM tbFatorIndiceMonetarioAtualizado " \
-                      f"INNER JOIN TbIndiceMonetario ON tbFatorIndiceMonetarioAtualizado.CodIndiceMonetario = TbIndiceMonetario.CodIndiceMonetario " \
-                      f"WHERE TbIndiceMonetario.DescIndiceMonetario = {indice}"
-        cursor.execute(select_query)
-        codigos_fator = cursor.fetchall()
-    else:
-        # Coletar os CodFatorIndiceMonetario que atendem aos critérios desejados
-        select_query = f"SELECT CodFatorIndiceMonetario FROM tbFatorIndiceMonetarioAtualizado Where CodIndiceMonetario <> 9"
-        cursor.execute(select_query)
-        codigos_fator = cursor.fetchall()
-
-    if len(codigos_fator) > 0:  # Check if there are results
-        # Deletar apenas os valores recuperados do SELECT
-        delete_query = f"DELETE FROM tbFatorIndiceMonetarioAtualizado WHERE CodFatorIndiceMonetario IN ({', '.join(map(str, [x[0] for x in codigos_fator]))})"
-        cursor.execute(delete_query)
-        conn.commit()
-    else:
-        print("Nenhum índice encontrado no banco de dados")
-
     # Chamado a função para recuperar os indicadores econômicos
     url = "https://debit.com.br/tabelas/indicadores-economicos.php"
     todos_indices = get_todos_indices(url)
@@ -93,16 +71,37 @@ def indices_avulso(banco, indice):
             ano = int(mes_ano[1])
             valor = float(value_string.replace('.', '').replace(',', '.').replace('%', '')) if value_string != '-' else None
 
-            # Incluir no banco de dados o indice
-            if valor != "-" and valor != "" and valor != None :
-                query = f"INSERT INTO tbFatorIndiceMonetarioAtualizado (Mes, Ano, Valor, DtCadastro, UserCadastro, CodIndiceMonetario, status) VALUES ({mes}, {ano}, {valor}, GETDATE(), 6026, {CodIndiceMonetario}, 1)"
-                cursor.execute(query)
-                print(query)
-                # Confirmar as alterações e fechar a conexão
-                conn.commit()
-            else:
-                print("O campo valor esta nulo")
+            if valor != None:
 
+            # Verificar se o registro já existe com os mesmos valores
+                select_query = f"SELECT COUNT(*) FROM tbFatorIndiceMonetarioAtualizado WHERE Mes = {mes} AND Ano = {ano} AND Valor = {valor} AND CodIndiceMonetario = {CodIndiceMonetario}"
+                cursor.execute(select_query)
+                count = cursor.fetchone()[0]
+
+                if count == 0:
+                    # Verificar se existe um registro com o mesmo ano, mês e CodIndiceMonetario, mas com valor diferente
+                    select_query = f"SELECT Valor FROM tbFatorIndiceMonetarioAtualizado WHERE Mes = {mes} AND Ano = {ano} AND CodIndiceMonetario = {CodIndiceMonetario}"
+                    cursor.execute(select_query)
+                    existing_value = cursor.fetchone()
+
+                    if existing_value:
+                        existing_value = existing_value[0]
+                        if existing_value != valor:
+                            # Atualizar o valor no registro existente
+                            update_query = f"UPDATE tbFatorIndiceMonetarioAtualizado SET Valor = {valor} WHERE Mes = {mes} AND Ano = {ano} AND CodIndiceMonetario = {CodIndiceMonetario}"
+                            cursor.execute(update_query)
+                            print(update_query)
+                            conn.commit()
+                    else:
+                        # Inserir um novo registro
+                        if valor is not None:
+                            insert_query = f"INSERT INTO tbFatorIndiceMonetarioAtualizado (Mes, Ano, Valor, DtCadastro, UserCadastro, CodIndiceMonetario, status) VALUES ({mes}, {ano}, {valor}, GETDATE(), 6026, {CodIndiceMonetario}, 1)"
+                            cursor.execute(insert_query)
+                            print(insert_query)
+                            conn.commit()
+                else:
+                    print("O registro já existe")
+                
         print('Índices atualizados com sucesso')
 
 
@@ -193,3 +192,9 @@ def get_indices_diversos(url):
         print("No second <thead> found.")
 
     return indices_diversos
+
+
+banco = "COPASA_DEV"
+indice = "Todos"
+
+indices_avulso(banco, indice)
