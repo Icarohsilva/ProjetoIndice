@@ -185,9 +185,3 @@ def indices_tjmg(banco, ano_base, indice_name):
             
 if __name__ == "__main__":
     pass
-
-banco = "COPASA_DEV"
-ano_base = 2023
-indice_name =  "Todos"
-
-indices_tjmg(banco, ano_base, indice_name)
