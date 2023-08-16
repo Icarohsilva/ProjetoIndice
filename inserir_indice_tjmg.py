@@ -108,11 +108,12 @@ def indices_tjmg(banco, ano_base, indice_name):
         for linha in dados_tabela:
             indice = linha[0].strip() # Remover espaços extras no final do índice
             
-            if indice_name != "Todos" and indice != indice_name:
-                continue
-            else:
-                indice = indice_name
-
+            if indice_name != "Todos":
+                if indice == indice_name:
+                    indice = indice_name
+                else:
+                    continue
+                
             mes_ano = linha[1]
             valor = linha[2]
 
@@ -184,3 +185,9 @@ def indices_tjmg(banco, ano_base, indice_name):
             
 if __name__ == "__main__":
     pass
+
+banco = "COPASA_DEV"
+ano_base = 2023
+indice_name =  "Todos"
+
+indices_tjmg(banco, ano_base, indice_name)

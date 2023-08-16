@@ -16,7 +16,7 @@ def meu_endpoint():
         indice = request.args.get('indice')
         site = request.args.get('site')
 
-        if indice == "Todos" or indice == "":
+        if indice == "Todos" or indice == "" or indice == None:
             indice = "Todos"
             if banco is not None:
                 indices_avulso(banco, indice)
