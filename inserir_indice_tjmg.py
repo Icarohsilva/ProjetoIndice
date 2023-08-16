@@ -173,7 +173,7 @@ def indices_tjmg(banco, ano_base, indice_name):
                             print(insert_query)
                             conn.commit()
                 else:
-                    print("O registro já existe")
+                    print(f"O registro já existe. Índice: {indice}, Ano: {ano}, Mes: {mes} e Valor: {valor}")
 
     
     print('Índices atualizados com sucesso')
