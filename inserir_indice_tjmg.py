@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
 
-def indices_tjmg(banco, ano_base):
+def indices_tjmg(banco, ano_base, indice_name):
     """Recuperar Índices do TJMG"""  
     banco = banco
     ano_base = ano_base
@@ -107,11 +107,17 @@ def indices_tjmg(banco, ano_base):
 
         for linha in dados_tabela:
             indice = linha[0].strip() # Remover espaços extras no final do índice
+            
+            if indice_name != "Todos" and indice != indice_name:
+                continue
+            else:
+                indice = indice_name
+
             mes_ano = linha[1]
             valor = linha[2]
 
             if valor != "-" and mes_ano != 'Ac.Ano':
-
+            
                 mes, ano = mes_ano.split('/')
 
                 # Converter o nome do mês para o número correspondente

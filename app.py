@@ -14,19 +14,23 @@ def meu_endpoint():
         banco = request.args.get('banco')   
         ano_base = request.args.get('ano_base')
         indice = request.args.get('indice')
+        site = request.args.get('site')
 
-        if indice == '':
-            indices_tjmg(banco, int(ano_base))
-            if indice == "":
-                indice = "Todos"
-            indices_avulso(banco, indice)
-
-        elif indice == "ICGJ (TJMG)":
+        if indice == "Todos" or indice == "":
+            indice = "Todos"
             if banco is not None:
-                indices_tjmg(banco, int(ano_base))
+                indices_avulso(banco, indice)
+                indices_tjmg(banco, int(ano_base), indice)
             else:
                 raise ValueError("Parâmetros faltando: 'banco', 'ano_base' e/ou 'indice' são obrigatórios")
-        elif indice != "ICGJ (TJMG)":
+
+        elif site == 1:
+            if banco is not None:
+                indices_tjmg(banco, int(ano_base), indice)
+            else:
+                raise ValueError("Parâmetros faltando: 'banco', 'ano_base' e/ou 'indice' são obrigatórios")
+        
+        elif site == 2:
             if indice == "":
                 indice = "Todos"
             if banco is not None: 
