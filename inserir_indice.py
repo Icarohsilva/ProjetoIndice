@@ -192,9 +192,3 @@ def get_indices_diversos(url):
         print("No second <thead> found.")
 
     return indices_diversos
-
-
-banco = "COPASA_DEV"
-indice = "Todos"
-
-indices_avulso(banco, indice)
