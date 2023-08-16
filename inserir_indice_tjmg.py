@@ -92,11 +92,6 @@ def indices_tjmg(banco, ano_base, indice_name):
                         valor = valor.text.strip().replace('.', '').replace(',', '.')
                         dados_tabela.append((descricao, mes_ano, valor))
 
-            # Agora a lista dados_tabela contém tuplas com o mês/ano, a descrição e o valor de cada índice
-            for registro in dados_tabela:
-                descricao, mes_ano, valor = registro
-                print(f"Mês/Ano: {mes_ano}, Descrição: {descricao}, Valor: {valor}")
-
 
         meses_dict = {
             'Jan': 1, 'Fev': 2, 'Mar': 3, 'Abr': 4, 'Mai': 5, 'Jun': 6,
